@@ -1,0 +1,29 @@
+# PyMuPDF (fitz) for PDF parsing
+PyMuPDF
+pdfplumber
+
+# SentenceTransformers (incl. dependencies like HuggingFace Transformers)
+
+
+# HuggingFace Transformers
+transformers
+
+scikit-learn
+
+# PyTorch 최신 버전 (2.6.0)
+torch
+
+# FastAPI for serving the chatbot
+fastapi==0.115.12
+
+# Uvicorn for ASGI server
+uvicorn
+
+# numpy for vector operations
+numpy
+
+accelerate
+
+huggingface_hub
+
+psutil
