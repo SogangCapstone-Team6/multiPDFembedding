@@ -3,12 +3,9 @@
 import os
 import json
 import hashlib
-import glob
 import numpy as np
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-
 
 from scripts.pdf_extractor import extract_pdf_content
 from scripts.chunker import chunk_sections
@@ -19,25 +16,13 @@ RAW_DIR = "data/raw"
 EXTRACTED_DIR = "data/extracted"
 CHUNK_DIR = "data/chunks"
 INDEX_DIR = "data/index"
-LOG_PATH = "data/processed_pdfs.log"
 CHUNK_SIZE = 500
 
 os.makedirs(EXTRACTED_DIR, exist_ok=True)
 os.makedirs(CHUNK_DIR, exist_ok=True)
 os.makedirs(INDEX_DIR, exist_ok=True)
 
-def get_pdf_hash(pdf_path):
-    with open(pdf_path, 'rb') as f:
-        return hashlib.sha256(f.read()).hexdigest()
-
-# 기존 처리된 PDF 해시 불러오기
-if os.path.exists(LOG_PATH):
-    with open(LOG_PATH, 'r', encoding='utf-8') as f:
-        processed_hashes = set(line.strip() for line in f)
-else:
-    processed_hashes = set()
-
-# 통합 적켜야 하는 정보
+# 통합 시켜야 하는 정보
 all_sections = []
 all_vectors = []
 
@@ -45,16 +30,19 @@ for fname in os.listdir(RAW_DIR):
     if not fname.lower().endswith(".pdf"):
         continue
 
-    pdf_path = os.path.join(RAW_DIR, fname)
-    file_hash = get_pdf_hash(pdf_path)
+    base_name = os.path.splitext(fname)[0]
+    chunk_file_path = os.path.join(CHUNK_DIR, f"{base_name}_chunks.json")
 
-    if file_hash in processed_hashes:
-        print(f"[SKIP] {fname} already processed.")
+    # 처리된 PDF인지 확인: chunk 결과 파일이 있으면 SKIP
+    if os.path.exists(chunk_file_path):
+        print(f"[SKIP] {fname} already processed (chunk file exists).")
         continue
+
+    pdf_path = os.path.join(RAW_DIR, fname)
 
     print(f"[PROCESSING] {fname}")
     try:
-        # 1. 세트션 추출
+        # 1. 섹션 추출
         extracted = extract_pdf_content(pdf_path)
         sections = extracted["sections"]
 
@@ -62,7 +50,7 @@ for fname in os.listdir(RAW_DIR):
             sec["source_pdf"] = fname
         all_sections.extend(sections)
 
-        # 2. 체크 나누기
+        # 2. 섹션을 chunk로 나누기
         chunks = chunk_sections(sections, chunk_size=CHUNK_SIZE)
 
         # 3. 임베딩 생성
@@ -79,19 +67,15 @@ for fname in os.listdir(RAW_DIR):
                 }
             })
 
-        # 경로에 다시 결과 저장
-        base_name = os.path.splitext(fname)[0]
+        # 5. 결과 저장
         with open(os.path.join(EXTRACTED_DIR, f"{base_name}.json"), 'w', encoding='utf-8') as f:
             json.dump(extracted, f, ensure_ascii=False, indent=2)
 
-        with open(os.path.join(CHUNK_DIR, f"{base_name}_chunks.json"), 'w', encoding='utf-8') as f:
+        with open(chunk_file_path, 'w', encoding='utf-8') as f:
             json.dump(chunks, f, ensure_ascii=False, indent=2)
 
         with open(os.path.join(INDEX_DIR, f"{base_name}_vectors.json"), 'w', encoding='utf-8') as f:
             json.dump(all_vectors, f, ensure_ascii=False, indent=2)
-
-        with open(LOG_PATH, 'a', encoding='utf-8') as f:
-            f.write(file_hash + "\n")
 
         print(f"[DONE] {fname}: {len(chunks)} chunks, {len(contents)} embeddings")
 

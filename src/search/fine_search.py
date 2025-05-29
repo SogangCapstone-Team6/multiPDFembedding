@@ -2,19 +2,17 @@
 
 import numpy as np
 
+# src/search/fine_search.py
 def fine_search_chunks(query_emb, chunk_index, target_sections, top_k=10):
     """
     chunk_index: [{ "embedding": [...], "metadata": {"section_title": "...", ...}}, ...]
-    target_sections: [{ "title": "2장 설치방법", ...}, ...]
-
-    - target_sections에 포함된 섹션 title만 필터링
-    - 코사인 유사도 내림차순으로 상위 top_k 청크 반환
+    target_sections: [{ "section": "2장 설치방법", ...}, ...]  # "title" 대신 "section" 사용
     """
-    section_titles = [sec["title"] for sec in target_sections]
+    section_titles = [sec["section"] for sec in target_sections]  # "title" -> "section"으로 변경
 
     candidates = [
         item for item in chunk_index
-        if item["metadata"]["section_title"] in section_titles
+        if item["metadata"]["section"] in section_titles  # "section_title" -> "section"으로 변경
     ]
 
     results = []

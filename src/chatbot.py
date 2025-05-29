@@ -11,7 +11,7 @@ from src.search.fine_search import fine_search_chunks
 
 SECTIONS_PATH = "data/extracted/sections_with_emb.json"
 CHUNK_INDEX_PATH = "data/index/full_vectors.json"
-TOP_K_SECTIONS = 3
+TOP_K_SECTIONS = 10
 TOP_K_CHUNKS = 5
 
 def build_prompt(query, relevant_chunks):
@@ -37,15 +37,24 @@ def answer_query(query: str, streaming=False):
         section_data = json.load(f)
 
     # 3. coarse search
+    
     top_sections = coarse_search_sections(query, section_data, top_k=TOP_K_SECTIONS)
+    print("=== Top Sections ===")
+    for sec in top_sections:
+        print(f"Section: {sec['section']}, Start Page: {sec['start_page']}, End Page: {sec['end_page']}")
 
     # 4. chunk index 로드
     with open(CHUNK_INDEX_PATH, "r", encoding="utf-8") as f:
         chunk_index = json.load(f)
 
     # 5. fine search
+    
     top_chunks = fine_search_chunks(query_emb, chunk_index, target_sections=top_sections, top_k=TOP_K_CHUNKS)
-
+    print("\n=== Top Chunks ===")
+    for chunk in top_chunks:
+        meta = chunk["metadata"]
+        print(f"Section: {meta['section']}, Text: {meta['text'][:200]}... (총 길이: {len(meta['text'])}자)")
+        
     # 6. 프롬프트 구성
     prompt = build_prompt(query, top_chunks)
 

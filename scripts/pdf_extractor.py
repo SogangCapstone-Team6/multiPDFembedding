@@ -10,7 +10,8 @@ import tempfile
 from pathlib import Path
 import time
 
-UPSTAGE_API_KEY = "up_IXLbcxj6xseEtCv9UJlNk8e48h5xm"
+UPSTAGE_API_KEY = "up_kJSwCp4N44ppYR0gxDKaLNsMFNVDn"
+
 UPSTAGE_OCR_URL = "https://api.upstage.ai/v1/document-digitization"
 
 def build_sections_from_toc(toc: List[List], total_pages: int) -> List[Dict[str, Any]]:
@@ -100,6 +101,16 @@ def extract_text_with_ocr(pdf_path: str, page_num: int, doc: fitz.Document, cach
                 wait_time = retry_delay * (2 ** attempt)
                 print(f"[RETRY] Rate limit on page {page_num + 1}. Waiting {wait_time}s...")
                 time.sleep(wait_time)
+
+            elif response.status_code == 401:
+                error_json = response.json()
+                error_msg = error_json.get("error", {}).get("message", "")
+                print(f"[ERROR] OCR API failed on page {page_num + 1}: {response.status_code} - {error_msg}")
+                
+                if "suspended" in error_msg.lower() or "insufficient credit" in error_msg.lower():
+                    print("[FATAL] API key is suspended or has insufficient credit. Halting execution.")
+                    sys.exit(1)  # 프로그램 강제 종료
+                break  # 다른 이유의 401이면 그냥 break
             else:
                 print(f"[ERROR] OCR API failed on page {page_num + 1}: {response.status_code} - {response.text}")
                 break
